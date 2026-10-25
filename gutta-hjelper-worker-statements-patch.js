@@ -9,8 +9,6 @@
 
   function addUi(){
     if(document.querySelector('#workerStatement')) return;
-    const actions=document.querySelector('#home .actions');
-    if(actions) actions.insertAdjacentHTML('beforeend',`<button class="action admin-only" type="button" onclick="ghOpenWorkerStatement()"><i>📄</i>Månedsgrunnlag</button>`);
     document.querySelector('main').insertAdjacentHTML('beforeend',`
       <section id="workerStatement" class="view">
         <div class="section"><h2>Arbeids- og betalingsgrunnlag</h2></div>
@@ -36,6 +34,20 @@
 
   function open(id){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));scrollTo(0,0)}
   window.ghOpenWorkerStatement=()=>{if(role!=='admin')return;addUi();populateWorkers();open('workerStatement')};
+
+  window.ghPrepareWorkerStatement=async(userId,periodFrom,periodTo,hourlyRate)=>{
+    if(role!=='admin')return;
+    addUi();
+    populateWorkers();
+    open('workerStatement');
+    $('#statementWorker').value=userId||'';
+    $('#statementFrom').value=periodFrom||first();
+    $('#statementTo').value=periodTo||day();
+    $('#statementPayDate').value=day();
+    if(userId)await loadProfile();
+    if(hourlyRate!==undefined&&hourlyRate!==null)$('#statementRate').value=Number(hourlyRate||0);
+    $('#statementForm').scrollIntoView({behavior:'smooth'});
+  };
 
   function populateWorkers(){
     $('#statementWorker').innerHTML='<option value="">Velg arbeider</option>'+users.filter(u=>u.role==='worker'&&u.active).map(u=>`<option value="${u.user_id}">${esc(u.display_name||u.email)}</option>`).join('');
