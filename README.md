@@ -24,3 +24,11 @@ This design deliberately does not expose the Supabase service-role key to the br
 7. Deploy over HTTPS.
 
 Official invoices, payroll, tax and VAT reporting stay in the chosen Norwegian accounting system.
+
+## Password login
+The pilot now uses normal Supabase email/password login rather than magic links for everyday access.
+
+- Existing Auth users need a password set in Supabase Authentication before first password login.
+- The browser session persists through Supabase Auth, so users normally remain signed in on their device.
+- **Glemt passord?** sends the standard Supabase password-reset email.
+- There is no public sign-up button. Accounts remain controlled by the administrator.
