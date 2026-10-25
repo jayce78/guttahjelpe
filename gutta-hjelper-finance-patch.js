@@ -97,7 +97,7 @@
     const select=document.querySelector('#paymentWorker');
     if(!select)return;
     const old=select.value;
-    select.innerHTML='<option value="">Velg arbeider</option>'+users.filter(u=>u.role==='worker'&&u.active).map(u=>`<option value="${u.user_id}">${esc(u.display_name||u.email)}</option>`).join('');
+    select.innerHTML='<option value="">Velg arbeider</option>'+users.filter(u=>u.active&&['worker','admin'].includes(u.role)).sort((a,b)=>(a.display_name||a.email||'').localeCompare(b.display_name||b.email||'','nb')).map(u=>`<option value="${u.user_id}">${esc(u.display_name||u.email)}${u.role==='admin'?' · Admin':''}</option>`).join('');
     if(old&&users.some(u=>u.user_id===old))select.value=old;
   }
 
@@ -139,7 +139,7 @@
         <article class="card">
           <div class="jobhead"><div><h3>${esc(user?.display_name||user?.email||'Ukjent bruker')}</h3><div class="meta">${from} til ${to}</div></div><strong>${hours.toLocaleString('nb-NO')} t</strong></div>
           <div class="grid" style="margin-top:10px"><div class="field"><label>Intern sats (kr/time)</label><input id="rate-${userId}" type="number" min="0" step="0.01" value="${rate}"></div><div class="field"><label>Samlet betalingsgrunnlag</label><input value="${money(totalBasis)}" readonly></div></div>
-          <div class="form-actions"><button class="btn alt" type="button" onclick="ghSaveRate('${userId}')">Lagre sats</button><button class="btn alt" type="button" onclick="ghCreateMonthlyStatement('${userId}')">Lag månedsgrunnlag</button><button class="btn" type="button" onclick="ghMarkWorkerPaid('${userId}',${hours},${expenseTotal})">Marker betalt</button></div>
+          <div class="form-actions"><button class="btn alt" type="button" onclick="ghSaveRate('${userId}')">Lagre sats</button><button class="btn" type="button" onclick="ghMarkWorkerPaid('${userId}',${hours},${expenseTotal})">Marker betalt</button></div>
         </article>
         <div class="section"><h2>Jobber arbeideren har vært involvert i</h2></div>
         <div class="list">${projectRows.map(r=>`<div class="card"><div class="jobhead"><div><h3>${esc(r.job.job_no)} · ${esc(r.job.customer)}</h3><div class="meta">${esc(r.job.job_date)} · ${esc(r.job.service)}</div></div><strong>${r.jobHours.toLocaleString('nb-NO')} t</strong></div><div class="cardfoot"><span>Utlegg registrert</span><strong>${money(r.jobExpenses)}</strong></div></div>`).join('')||'<div class="empty">Ingen jobber i valgt periode.</div>'}</div>
@@ -158,14 +158,6 @@
     const { error } = await db.from('worker_rates').upsert({ user_id: userId, hourly_rate, updated_by: session.user.id }, { onConflict: 'user_id' });
     if (error) return fail(error);
     await renderWorkerSummary();
-  };
-
-  window.ghCreateMonthlyStatement = userId => {
-    const from=document.querySelector('#workerFrom').value;
-    const to=document.querySelector('#workerTo').value;
-    const rate=Number(document.querySelector(`#rate-${userId}`).value||0);
-    if(typeof window.ghPrepareWorkerStatement!=='function')return alert('Månedsgrunnlag-modulen er ikke lastet. Kontroller script-rekkefølgen i index.html.');
-    window.ghPrepareWorkerStatement(userId,from,to,rate);
   };
 
   window.ghMarkWorkerPaid = async (userId, hours, expenseTotal=0) => {
