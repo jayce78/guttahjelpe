@@ -59,7 +59,7 @@
       </section>`);
 
     document.querySelector('#workerFrom').value = firstOfMonth();
-    populatePaymentWorkers();
+    void populatePaymentWorkers().catch(e=>console.error(e));
     document.querySelector('#workerTo').value = isoToday();
     document.querySelector('#confirmationDate').value = isoToday();
     document.querySelector('#paymentWorker').addEventListener('change', renderWorkerSummary);
@@ -79,7 +79,14 @@
 
   window.ghOpenWorkerPayments = async () => {
     if (role !== 'admin') return;
-    addUi(); openView('workerPayments'); await renderWorkerSummary();
+    addUi();
+    openView('workerPayments');
+    try {
+      await populatePaymentWorkers();
+      await renderWorkerSummary();
+    } catch(e) {
+      document.querySelector('#workerSummary').innerHTML=`<div class="notice">${esc(e.message||'Kunne ikke hente brukere.')}</div>`;
+    }
   };
 
   window.ghOpenPaymentConfirmation = () => {
@@ -93,12 +100,19 @@
     return data || [];
   }
 
-  function populatePaymentWorkers(){
+  async function populatePaymentWorkers(preferredUserId=''){
     const select=document.querySelector('#paymentWorker');
-    if(!select)return;
-    const old=select.value;
-    select.innerHTML='<option value="">Velg arbeider</option>'+users.filter(u=>u.active&&['worker','admin'].includes(u.role)).sort((a,b)=>(a.display_name||a.email||'').localeCompare(b.display_name||b.email||'','nb')).map(u=>`<option value="${u.user_id}">${esc(u.display_name||u.email)}${u.role==='admin'?' · Admin':''}</option>`).join('');
-    if(old&&users.some(u=>u.user_id===old))select.value=old;
+    if(!select)return [];
+    const previous=preferredUserId||select.value;
+    select.innerHTML='<option value="">Henter brukere…</option>';
+    const {data,error}=await db.from('app_users').select('user_id,display_name,email,role,active').eq('active',true).order('display_name',{ascending:true});
+    if(error){select.innerHTML='<option value="">Kunne ikke hente brukere</option>';throw error;}
+    const people=(data||[]).filter(u=>['worker','admin'].includes(u.role));
+    select.innerHTML='<option value="">Velg arbeider</option>'+people.map(u=>`<option value="${u.user_id}">${esc(u.display_name||u.email)}${u.role==='admin'?' · Admin':''}</option>`).join('');
+    if(previous&&people.some(u=>u.user_id===previous))select.value=previous;
+    // Refresh the shared users cache for downstream name lookups without relying on its timing.
+    users.splice(0,users.length,...people);
+    return people;
   }
 
   async function renderWorkerSummary() {
