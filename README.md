@@ -1,4 +1,4 @@
-# Gutta Hjelper Arbeid V6
+# Gutta Hjelper
 
 A simplified, single-business mobile web app.
 
